@@ -1,29 +1,43 @@
-# Esboço da Lógica com Cadastro Dinâmico
+import sqlite3
 
-# O banco de dados (lista) agora começa vazio
-alunos_na_escola = []
+# 1. CONEXÃO COM O BANCO DE DADOS
+conexao = sqlite3.connect('banco_van.db')
+cursor = conexao.cursor()
 
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS alunos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        status TEXT NOT NULL
+    )
+''')
+conexao.commit()
+
+# 2. FUNÇÃO DE CADASTRO
 def cadastrar_aluno():
     print("\n--- NOVO CADASTRO ---")
     nome_novo = input("Digite o nome do aluno: ")
     
-    # O .append() adiciona o aluno digitado à nossa lista com o status inicial
-    alunos_na_escola.append({"nome": nome_novo, "status": "Na Escola"})
-    print(f"✅ {nome_novo} cadastrado com sucesso!")
+    cursor.execute("INSERT INTO alunos (nome, status) VALUES (?, ?)", (nome_novo, "Na Escola"))
+    conexao.commit()
+    
+    print(f"✅ {nome_novo} cadastrado com sucesso e salvo no banco de dados!")
 
+# 3. FUNÇÃO DE CHAMADA
 def chamada_retorno():
-    # Trava extra: não deixa iniciar a chamada se a lista estiver vazia
-    if not alunos_na_escola:
+    cursor.execute("SELECT * FROM alunos")
+    se_vazio = cursor.fetchall()
+    
+    if not se_vazio:
         print("\n⚠️ Nenhum aluno cadastrado ainda. Vá no menu 1 primeiro!")
         return
 
     print("\n--- INICIANDO EMBARQUE NA ESCOLA ---")
     
     while True:
-        # Verifica quem ainda tem o status "Na Escola"
-        faltam_embarcar = [aluno for aluno in alunos_na_escola if aluno["status"] == "Na Escola"]
+        cursor.execute("SELECT nome FROM alunos WHERE status = 'Na Escola'")
+        faltam_embarcar = cursor.fetchall()
         
-        # Se não falta ninguém, libera a van
         if not faltam_embarcar:
             print("\n✅ TODOS A BORDO! Nenhum aluno esquecido. A van está liberada para partir.")
             break
@@ -31,7 +45,7 @@ def chamada_retorno():
         print(f"\n⚠️ ATENÇÃO: Faltam {len(faltam_embarcar)} aluno(s) embarcar.")
         print("Ainda estão na escola:")
         for aluno in faltam_embarcar:
-            print(f"- {aluno['nome']}")
+            print(f"- {aluno[0]}")
             
         nome_digitado = input("\nDigite o nome de quem entrou na van (ou 'parar'): ")
         
@@ -39,19 +53,16 @@ def chamada_retorno():
             print("\n❌ Embarque interrompido. NÃO PARTA, ainda faltam alunos!")
             break
             
-        aluno_encontrado = False
-        for aluno in alunos_na_escola:
-            if aluno["nome"].lower() == nome_digitado.lower() and aluno["status"] == "Na Escola":
-                aluno["status"] = "Na Van" # Atualiza o status em tempo real
-                print(f"\n✔️ {aluno['nome']} conferido e está na van!")
-                aluno_encontrado = True
-                break
+        cursor.execute("UPDATE alunos SET status = 'Na Van' WHERE nome = ? COLLATE NOCASE AND status = 'Na Escola'", (nome_digitado,))
+        conexao.commit()
         
-        if not aluno_encontrado:
+        if cursor.rowcount > 0:
+            print(f"\n✔️ {nome_digitado} conferido e está na van!")
+        else:
             print("\n❌ Nome incorreto ou aluno já está na van. Verifique novamente.")
 
+# 4. MENU PRINCIPAL
 def menu_principal():
-    # O laço (while True) mantém o programa rodando até você escolher a opção 3
     while True:
         print("\n" + "="*30)
         print("🚐 SISTEMA DA VAN ESCOLAR")
@@ -67,10 +78,10 @@ def menu_principal():
         elif opcao == '2':
             chamada_retorno()
         elif opcao == '3':
-            print("\nSaindo do sistema!")
+            print("\nSaindo do sistema. Até amanhã!")
             break
         else:
             print("\n❌ Opção inválida. Tente novamente.")
 
-# Essa linha é o "motor de arranque" que faz o menu aparecer quando você roda o script
+# INICIA O SISTEMA
 menu_principal()
