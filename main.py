@@ -1,9 +1,19 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 
-# Inicializa o "motor" da API
 app = FastAPI(title="API da Van Escolar")
 
+# Libera o cadeado da API para o aplicativo do celular conseguir conectar
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # O asterisco permite que qualquer tela acesse a API
+    allow_credentials=True,
+    allow_methods=["*"], # Libera os métodos de ler (GET) e alterar (PUT/POST)
+    allow_headers=["*"],
+)
+
+# Inicializa o "motor" da API
 # Rota de teste para confirmar se o servidor está no ar
 @app.get("/")
 def raiz():
